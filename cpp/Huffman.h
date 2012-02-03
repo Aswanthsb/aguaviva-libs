@@ -193,7 +193,7 @@ public:
             }
 		      ini += symbols[i].size();
          }
-	      ini <<= 2;
+	      ini <<= 1;
       }
 
       //handle error
@@ -202,7 +202,7 @@ public:
 };
 
 
-
+#if HUFFMANTEST
 
 void huffmanTest()
 {
@@ -249,5 +249,7 @@ void huffmanTest()
    printf("\nCompressed size: %%%2.1f", ((float)bso.GetPos()/8.0)*100.0 / strlen(text) );
 
 }
+#endif HUFFMANTEST
+
 
 #endif
