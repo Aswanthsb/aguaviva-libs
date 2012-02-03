@@ -33,7 +33,7 @@ public:
       bitCount++;
    }
 
-   void PutBitN(unsigned char b, char bits)
+   void PutBitN(unsigned int b, char bits)
    {
       while(bits--)
       {
@@ -41,9 +41,9 @@ public:
       }     
    }
 
-   unsigned char GetBitN(char bits)
+   unsigned int GetBitN(char bits)
    {
-      unsigned char b = 0;
+      unsigned int b = 0;
       while(bits--)
       {
          b<<=1;

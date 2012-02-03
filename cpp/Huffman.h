@@ -35,13 +35,66 @@ class CreateHuffmanTree
 {
    std::list<Symbol<T> *> list;
 
-   std::vector<int> symbols[16];
+   std::vector<T> symbols[16];
 
 public:
    CreateHuffmanTree()
    {
    }
-   
+
+   int LoadDictionary(void *data)
+   {
+      unsigned int size[16];
+      unsigned int *pSize = (unsigned int *)data;
+      for (unsigned int i=0;i<16;i++)
+      {
+         size[i] = *pSize++;
+      }
+
+      unsigned int totalsize = 0;
+      T *sym = (T *)pSize;
+      for (unsigned int i=0;i<16;i++)
+      {
+         for (unsigned int j=0;j<size[i];j++)
+         {
+            symbols[i].push_back( *sym++ );
+         }
+         totalsize += size[i];
+      }
+
+      return ( 16 * sizeof(int)) + (totalsize * sizeof(T));
+   }
+
+   void SaveDictionary(unsigned char **data, unsigned int *pSize)
+   {
+      //compute dicts size
+      int totalsize = 0;
+      for (unsigned int i=0;i<16;i++)
+      {
+         totalsize += symbols[i].size();
+      }
+
+      *pSize = ( 16 * sizeof(int)) + (totalsize * sizeof(T));
+
+      *data = (unsigned char *)malloc( *pSize );
+      int *pDest = (int*)*data;
+
+      for (unsigned int i=0;i<16;i++)
+      {
+         *pDest++ = symbols[i].size();
+      }
+
+      T *pSym = (T *)pDest;
+      for (unsigned int i=0;i<16;i++)
+      {
+         for (unsigned int j=0;j<symbols[i].size();j++)
+         {
+            *pSym++ = symbols[i][j];
+         }
+      }     
+   }
+
+
    void AddElement(Symbol<T> *pSym)
    {
       if ( list.size() == 0)
@@ -104,9 +157,9 @@ public:
       }
    }
 
-   void Encode( char value, BitStream *pBS)
+   void Encode( T value, BitStream *pBS)
    {
-      int code = 0;
+      unsigned int code = 0;
       for(unsigned int i=0;i<16;i++)
       {
          for(unsigned int j=0;j<symbols[i].size();j++)
@@ -140,13 +193,15 @@ public:
             }
 		      ini += symbols[i].size();
          }
-	      ini *= 2;
+	      ini <<= 2;
       }
 
       //handle error
       return  (T)(0xff);
    }
 };
+
+
 
 
 void huffmanTest()

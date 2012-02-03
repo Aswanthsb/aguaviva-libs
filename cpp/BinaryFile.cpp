@@ -1,11 +1,11 @@
 #include "stdlib.h"
 #include "stdio.h"
 
-bool ReadFile(char *fileName, void **pOut, int *pSize)
+bool ReadFile(char *fileName, void **pOut, unsigned int *pSize)
 {
 	FILE *file;
 
-	fopen_s(&file, name, "rb");
+	fopen_s(&file, fileName, "rb");
 	if (!file)
 	{
 		//fprintf(stderr, "Unable to open file %s", name);
@@ -18,7 +18,7 @@ bool ReadFile(char *fileName, void **pOut, int *pSize)
 	fseek(file, 0, SEEK_SET);
 
 	//Allocate memory
-	unsigned char *buffer=(unsigned char *)malloc(fileLen+1);
+	unsigned char *buffer=(unsigned char *)malloc( fileLen );
 	if (!buffer)
 	{
 		//fprintf(stderr, "Memory error!");
@@ -40,3 +40,23 @@ bool ReadFile(char *fileName, void **pOut, int *pSize)
 
 	return true;
 }
+
+
+bool WriteFile(char *fileName, unsigned char *pOut, unsigned int fileLen)
+{
+	FILE *file;
+	fopen_s(&file, fileName, "wb");
+	if (!file)
+	{
+		//fprintf(stderr, "Unable to open file %s", name);
+		return false;
+	}
+	
+	//Read file contents into buffer
+	size_t size = fwrite(pOut, fileLen, 1, file);
+
+	fclose(file);
+
+	return true;
+}
+
