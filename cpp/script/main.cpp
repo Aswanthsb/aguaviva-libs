@@ -4,10 +4,10 @@
 #include <tchar.h>
 
 #include <string.h>
-#include "c:\WinAVR-20100110\projects\libs\script.h"
-#include "c:\WinAVR-20100110\projects\libs\parser.h"
-#include "c:\WinAVR-20100110\projects\libs\variables.h"
-#include "c:\WinAVR-20100110\projects\libs\expression.h"
+#include "script.h"
+#include "parser.h"
+#include "variables.h"
+#include "expression.h"
 
 Variables var;
 
