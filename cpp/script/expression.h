@@ -1,1 +1,0 @@
-bool parseExpression(char **ptr, Variables *var, int *out);
