@@ -1,0 +1,1 @@
+int GetCommand(char *command);
