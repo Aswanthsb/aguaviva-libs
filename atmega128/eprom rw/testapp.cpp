@@ -15,8 +15,10 @@
 #include "rmmodem.h"
 #include "parser.h"
 
+#include "e27128.h"
 #include "e27256.h"
 #include "e27512.h"
+#include "RAM62256.h"
 
 
 #define LED_PORT   PORTB
@@ -69,75 +71,24 @@ ISR(TIMER1_OVF_vect)
 char wait[] = "|/-\\";
 char w = 0;
 
-void Dump( unsigned int address, unsigned char (*pPeek)(unsigned int) )
-{
-	unsigned char buf[16];
-	
-	for(int j=0;j<16;j++)
-	{
-		printf("%04x ", address );
-	
-		for(int i=0;i<16;i++)
-		{
-			buf[i] = (*pPeek)(address);
-			printf("%02x ", buf[i] );
-			address++;
-		}
-
-		for(int i=0;i<16;i++)
-		{
-			unsigned char c = buf[i];
-			if ( c<32 || c > 127) 
-				c = '.';
-			printf("%c", c );
-		}
-		
-		printf("\n");
-	}
-}
-
 void SetDelay(int _d1, int _d2);
 
 char msg[] = "The AT28C256 is a high-performance electrically erasable and programmable readonly memory. Its 256K of memory is organized as 32,768 words by 8 bits. Manufactured with Atmel's advanced nonvolatile CMOS technology, the device offers access times to 150 ns with power dissipation of just 440 mW. When the device is deselected, the CMOS standby current is less than 200 µA.";
 
-bool ProcessBasicCommand( char **p )
-{
-	if (**p == '{')
-	{
-		*p++;
-		ProcessBasicCommand( p );
-	}
-	else if (**p == '}')
-	{
-		*p++;
-		return true;
-	}
-	else if ( ParseToken(p, "for") )
-	{
-		ParseSpaces(p);
-		int l = 0;
-		
-		ParseInt(p, &l);		
-		
-		for(int i=0;i<l;i++)
-		{
-			char **fp = p
-			if ( Expect(fp, "{") )
-			{
-				do 
-				{
-					ProcessBasicCommand( fp );
-					ParseSpaces(fp);		
-				}while( Expect(fp,';') )
-				
-				Expect(fp, "}");
-			}
-		}
-	}
-}
+unsigned DumpAddress = 0;
+unsigned DumpLength = 256;
+
+E27512 e27512;
+E27256 e27256;
+E27128 e27128;
+RAM62256 ram62256;
+
+IO *pIO = &ram62256;
+
 
 bool ProcessCommand( char **p )
 {
+/*
 	if ( ParseToken(p, "delay") )
 	{
 		ParseSpaces(p);
@@ -152,17 +103,26 @@ bool ProcessCommand( char **p )
 			}
 		}
 	}
-	else if ( ParseToken(p, "dump") )
+	else 
+*/
+	if ( ParseToken(p, "dump") )
 	{
 		ParseSpaces(p);
-		int addr=0;
-		if ( ParseInt(p, &addr) )
+		if ( ParseInt(p, (int*)&DumpAddress) )
 		{
-			address = addr;
+			ParseSpaces(p);
+			ParseInt(p, (int*)&DumpLength);
 		}
 		
-		Dump(address, pPeekVar);
+		Dump(DumpAddress, DumpLength, pIO);
+
+		DumpAddress += DumpLength;
 	}
+	else if ( ParseToken(p, "download") )
+	{
+		rmModem(&Ser0, pIO);
+	}
+/*
 	else if ( ParseToken(p, "test") )
 	{
 		ParseSpaces(p);
@@ -185,12 +145,13 @@ bool ProcessCommand( char **p )
 			}
 		}		
 	}
+*/
 	else if ( ParseToken(p, "crc") )
 	{
 		uint16_t crc = 0;
-		for(int i=0;i<strlen(msg);i++)
+		for(unsigned int i=0;i<strlen(msg);i++)
 		{
-			crc = _crc16_update(crc, pPeekVar(i));
+			crc = _crc16_update(crc, pIO->Read(i));
 		}
 		printf("crc %x\n", crc);
 	}
@@ -235,16 +196,6 @@ bool ProcessCommand( char **p )
 
 int main( void ) 
 {
-	DDRA = 0x00;
-	PORTA = 0x00;
-	DDRB = 0x00;
-	PORTB = 0x00;
-	DDRC = 0x00;
-	PORTC = 0x00;
-	DDRD = 0x00;
-	PORTD = 0x00;
-	DDRF = 0x00;
-	PORTF = 0x00;
 
 /*
 	TCCR0 = 1<<CS02;                      //divide by 256 * 256 
@@ -261,9 +212,7 @@ int main( void )
 	
 	printf("XChip stuff\n");
 	   
-	unsigned address = 0;
-	   
-	unsigned char (*pPeekVar)(unsigned int) = Read27256;	   
+	pIO->Init();
 	   
 	while ( 1 ) 
 	{	
@@ -291,37 +240,40 @@ int main( void )
 		*/
 		char c = **p;
 		
-		if ( c == '2' )
+		if ( c == '1' )
 		{
-			pPeekVar = Read27256;
+			pIO = &e27128;            
+			printf("Read27128\n");
+		}
+		else if ( c == '2' )
+		{
+			pIO = &e27256;
 			printf("Read27256\n");
 		}
 		else if ( c == '5' )
 		{
-			pPeekVar = Read27512;
+			pIO = &e27512;
 			printf("Read27512\n");
 		}
+		else if ( c == 'd')
+		{		
+            Dump(0, 256, pIO);
+		}
 		else if ( c == 'o')
-		{
-			for(int i=0;i<strlen(msg);i++)
-				Write27256(i, msg[i]);
+		{		
+			for(unsigned int i=0;i<strlen(msg);i++)
+				pIO->Write(i, msg[i]);
 		}
 		else if ( c == 'O')
 		{
-			for(int i=0;i<strlen(msg);i++)
-				Write27256(i, 0);
+			for(unsigned int i=0;i<strlen(msg);i++)
+				pIO->Write(i, 0);
 		}
 		else if ( c == 'p')
 		{
-			SetAddress27256(0);
-			SetData27256('r');
-			Dump(0, pPeekVar);
-			SetAddress27256(1);
-			SetData27256('a');
-			SetAddress27256(2);
-			SetData27256('u');
-			SetAddress27256(3);
-			SetData27256('l');
+            char ttt[] = "raul";
+			for(unsigned int i=0;i<strlen(ttt);i++)
+				pIO->Write(i, ttt[i]);
 		}
 		else
 		{

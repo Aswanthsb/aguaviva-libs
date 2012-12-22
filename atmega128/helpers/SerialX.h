@@ -16,7 +16,7 @@ public:
 		len = 0;
 	}
 
-	void PutChar(unsigned char c)
+	void PutChar(const unsigned char c)
 	{
 		if (len < (RX_BUFFER_SIZE-1)  )
 		{
@@ -65,7 +65,7 @@ public:
 		return GetChar();
 	}
 
-	void Write( const unsigned char c ) {};
+	virtual void Write( const unsigned char c ) {};
 
 	void Write( const char *str )
 	{

@@ -1,17 +1,32 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-// +5 b0 b1 b2 b3 b4 b5 b6 b7 d0 d1 d2 d3 d4
-// |                                        |
-// |                                        |
-//  )                                       |
-// |                                        |
-// |________________________________________|
-//  A2 A3 A4 A5 A6 A7 c7 c6 c5 c4 c3 c2 c1 gnd
+//          _________
+//    A2  -|   |_|   |- +5
+//    A3  -|         |- b0
+//    A4  -|         |- B1
+//    A5  -|         |- B2
+//    A6  -|         |- B3
+//    A7  -|         |- B4
+//    C7  -|         |- B5
+//    C6  -|         |- B6
+//    C5  -|         |- b7
+//    C4  -|         |- D0
+//    C3  -|         |- D1
+//    C2  -|         |- D2
+//    C1  -|         |- D3
+//    GND -|_________|- D4
 
 
 #define aa(p,nn, n) DDR ## p |= (1<<nn); PORT##p &= ~(1<<nn); PORT##p |= (((a>>n)&1)<<nn);
 #define dd(p,nn, n) DDR ## p &= ~(1<<nn); PORT ## p &= ~(1<<nn); d|= ((PIN ## p >>nn)&1)<<n;
+
+#define OE_LOW {DDRB |= 1<<7;	PORTB &= ~(1<<7);}
+#define OE_HIGH {DDRB |= 1<<7;	PORTB |= (1<<7);}
+
+#define E_LOW {DDRB |= 1<<5;	PORTB &= ~(1<<5);}
+#define E_HIGH {DDRB |= 1<<5;	PORTB |= (1<<5);}
+
 
 void SetAddress27512(unsigned int a)
 {
@@ -31,19 +46,15 @@ void SetAddress27512(unsigned int a)
 	aa(B,2, 8)
 	aa(B,3, 9)
 	aa(B,4, 11)
-
-	//   CE
-	DDRB |= 1<<5;	PORTB &= ~(1<<5);
-	
 	aa(B,6, 10)
-
-	//   OE
-	DDRB |= 1<<7;	PORTB &= ~(1<<7);
 }
 
 unsigned char GetData27512()
 {
 	unsigned char d= 0;
+	
+	OE_LOW;
+	E_LOW;	
 
 	dd(C,3, 0);
 	dd(C,2, 1);

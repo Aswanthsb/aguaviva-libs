@@ -75,7 +75,7 @@ TARGET = testapp
 # Object files directory
 #     To put object files in current directory, use a dot (.), do NOT make
 #     this an empty or blank macro!
-OBJDIR = .
+OBJDIR = ./obj
 
 
 # List C source files here. (C dependencies are automatically generated.)
@@ -83,7 +83,7 @@ SRC =
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
-CPPSRC = testapp.cpp e27256.cpp e27512.cpp 
+CPPSRC = testapp.cpp e27128.cpp e27256.cpp e27512.cpp ee28256.cpp ram62256.cpp 
 
 
 # List Assembler source files here.
@@ -278,7 +278,7 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB) -lutils
 AVRDUDE_PROGRAMMER = stk500
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
-AVRDUDE_PORT = com9    # programmer connected to serial device
+AVRDUDE_PORT = com4    # programmer connected to serial device
 
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep

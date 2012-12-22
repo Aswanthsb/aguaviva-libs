@@ -2,7 +2,7 @@
 
 #include "dump.h"
 
-void Dump( unsigned int address, unsigned int len, IO *io )
+void Dump( unsigned int address, unsigned int len, IO *io)
 {
 	while( address < len )
 	{

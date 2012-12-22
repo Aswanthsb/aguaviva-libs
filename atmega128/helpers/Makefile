@@ -75,7 +75,7 @@ TARGET = utils
 # Object files directory
 #     To put object files in current directory, use a dot (.), do NOT make
 #     this an empty or blank macro!
-OBJDIR = .
+OBJDIR = ./obj
 
 
 # List C source files here. (C dependencies are automatically generated.)
@@ -597,11 +597,17 @@ clean_list :
 	$(REMOVE) $(TARGET).map
 	$(REMOVE) $(TARGET).sym
 	$(REMOVE) $(TARGET).lss
+	$(REMOVE) $(TARGET).a
 	$(REMOVE) $(SRC:%.c=$(OBJDIR)/%.o)
 	$(REMOVE) $(SRC:%.c=$(OBJDIR)/%.lst)
 	$(REMOVE) $(SRC:.c=.s)
 	$(REMOVE) $(SRC:.c=.d)
 	$(REMOVE) $(SRC:.c=.i)
+	$(REMOVE) $(SRC:%.cpp=$(OBJDIR)/%.o)
+	$(REMOVE) $(SRC:%.cpp=$(OBJDIR)/%.lst)
+	$(REMOVE) $(SRC:.cpp=.s)
+	$(REMOVE) $(SRC:.cpp=.d)
+	$(REMOVE) $(SRC:.cpp=.i)
 	$(REMOVEDIR) .dep
 
 

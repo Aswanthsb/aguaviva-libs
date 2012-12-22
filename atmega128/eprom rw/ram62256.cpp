@@ -36,8 +36,7 @@
 
 void Init62256()
 {
-	CS_LOW;
-	WR_HIGH;    
+	CS_HIGH;
 }
 
 void SetAddress62256(unsigned int a)
@@ -65,9 +64,22 @@ unsigned char GetData62256()
 {
 	unsigned char d= 0;
 
+    hiz(C,3)
+    hiz(C,2)
+    hiz(C,1)
+
+    hiz(D,0)
+    hiz(D,1)
+    hiz(D,2)
+    hiz(D,3)
+    hiz(D,4)    
+
 	WR_HIGH;    
 
 	OE_LOW;
+
+	CS_LOW;
+
 
 	_delay_ms(1);	
 	
@@ -98,14 +110,16 @@ void SetData62256(unsigned char a)
 	port(D,3, 4);
 	port(D,4, 3);
 
+	CS_LOW;
 	WR_LOW;
     
 	_delay_ms(1);
 
+
 	WR_HIGH;
+	CS_HIGH;
 
 	_delay_ms(1);
-
     
     hiz(C,3)
     hiz(C,2)
