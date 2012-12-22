@@ -11,28 +11,27 @@
 // A4   A7  -|         |- B4  A11
 // A3   C7  -|         |- B5  /OE
 // A2   C6  -|         |- B6  A10
-// A1   C5  -|         |- b7  /CE
+// A1   C5  -|         |- b7  /CS
 // A0   C4  -|         |- D0  Q7
 // Q0   C3  -|         |- D1  Q6  
 // Q1   C2  -|         |- D2  Q5
 // Q2   C1  -|         |- D3  Q4
 //      GND -|_________|- D4  Q3
 //
-
+ 
 #define port(p,nn, n) DDR##p |=  (1<<nn); PORT##p &= ~(1<<nn); PORT##p |= (((a>>n)&1)<<nn);
-#define inp(p,nn, n) DDR##p &= ~(1<<nn); PORT##p &= ~(1<<nn); d|= ((PIN##p >>nn)&1)<<n;
+#define inp(p,nn, n) d|= ((PIN##p >>nn)&1)<<n;
 
 #define hiz(p,nn) DDR##p &= ~(1<<nn); PORT##p &= ~(1<<nn); 
 
-#define CS_LOW {DDRB |= 1<<7;	PORTB &= ~(1<<7);}
-#define CS_HIGH {DDRB |= 1<<7;	PORTB |= (1<<7);}
+#define WR_LOW  {DDRB |= 1<<0;  PORTB &= ~(1<<0);}
+#define WR_HIGH {DDRB |= 1<<0;  PORTB |=  (1<<0);}
 
-#define OE_LOW {DDRB |= 1<<5;	PORTB &= ~(1<<5);}
-#define OE_HIGH {DDRB |= 1<<5;	PORTB |= (1<<5);}
+#define OE_LOW  {DDRB |= 1<<5;  PORTB &= ~(1<<5);}
+#define OE_HIGH {DDRB |= 1<<5;  PORTB |=  (1<<5);}
 
-#define WR_LOW {DDRB |= 0<<5;	PORTB &= ~(0<<5);}
-#define WR_HIGH {DDRB |= 0<<5;	PORTB |= (0<<5);}
-
+#define CS_LOW  {DDRB |= 1<<7;  PORTB &= ~(1<<7);}
+#define CS_HIGH {DDRB |= 1<<7;  PORTB |=  (1<<7);}
 
 void Init62256()
 {
@@ -80,8 +79,7 @@ unsigned char GetData62256()
 
 	CS_LOW;
 
-
-	_delay_ms(1);	
+    //wed need a delay to make sure eprom present the data to data bus
 	
 	inp(C,3, 0);
 	inp(C,2, 1);
@@ -113,23 +111,11 @@ void SetData62256(unsigned char a)
 	CS_LOW;
 	WR_LOW;
     
-	_delay_ms(1);
-
+    // here we present the data to the ram
+    // (would need a delay)
 
 	WR_HIGH;
-	CS_HIGH;
-
-	_delay_ms(1);
-    
-    hiz(C,3)
-    hiz(C,2)
-    hiz(C,1)
-
-    hiz(D,0)
-    hiz(D,1)
-    hiz(D,2)
-    hiz(D,3)
-    hiz(D,4)    
+	CS_HIGH;    
 }
 
 unsigned char Read62256(unsigned int address)

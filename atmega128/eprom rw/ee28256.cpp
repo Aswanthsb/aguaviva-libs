@@ -22,14 +22,14 @@
 #define dd(p,nn, n) DDR ## p &= ~(1<<nn); PORT ## p &= ~(1<<nn); d|= ((PIN ## p >>nn)&1)<<n;
 
 
-#define CE_LOW {DDRB |= 1<<7;	PORTB &= ~(1<<7);}
-#define CE_HIGH {DDRB |= 1<<7;	PORTB |= (1<<7);}
+#define CE_LOW  {DDRB |= 1<<7;  PORTB &= ~(1<<7);}
+#define CE_HIGH {DDRB |= 1<<7;  PORTB |=  (1<<7);}
 
-#define OE_LOW {DDRB |= 1<<5;	PORTB &= ~(1<<5);}
-#define OE_HIGH {DDRB |= 1<<5;	PORTB |= (1<<5);}
+#define OE_LOW  {DDRB |= 1<<5;  PORTB &= ~(1<<5);}
+#define OE_HIGH {DDRB |= 1<<5;  PORTB |=  (1<<5);}
 
-#define WE_LOW {DDRB |= 1<<0;	PORTB &= ~(1<<0);}
-#define WE_HIGH {DDRB |= 1<<0;	PORTB |= (1<<0);}
+#define WE_LOW  {DDRB |= 1<<0;  PORTB &= ~(1<<0);}
+#define WE_HIGH {DDRB |= 1<<0;  PORTB |=  (1<<0);}
 
 void SetAddress28256(unsigned int a)
 {
