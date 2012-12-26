@@ -18,11 +18,11 @@
 // Q2   C1  -|         |- D3  Q4
 //      GND -|_________|- D4  Q3
 //
- 
+
+#define hiz(p,nn) DDR##p &= ~(1<<nn); PORT##p &= ~(1<<nn);  
 #define port(p,nn, n) DDR##p |=  (1<<nn); PORT##p &= ~(1<<nn); PORT##p |= (((a>>n)&1)<<nn);
 #define inp(p,nn, n) d|= ((PIN##p >>nn)&1)<<n;
 
-#define hiz(p,nn) DDR##p &= ~(1<<nn); PORT##p &= ~(1<<nn); 
 
 #define WR_LOW  {DDRB |= 1<<0;  PORTB &= ~(1<<0);}
 #define WR_HIGH {DDRB |= 1<<0;  PORTB |=  (1<<0);}

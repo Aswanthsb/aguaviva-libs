@@ -1,6 +1,6 @@
 import serial
 import md5
-
+import msvcrt
 
 def LoadFile( filename ):
     f = open(filename, "rb")
@@ -42,11 +42,10 @@ def UploadData( data, address):
 
         remaining = size - p
 
-        block = 255;
+        block = 16;#255;
         if ( block > remaining):
             block = remaining
-            
-        
+                
         ser.write( "%c" % block )
             
         checksum = 0
@@ -62,11 +61,16 @@ def UploadData( data, address):
         #print(str, checksum & 0xff)
         r = ser.read(1)
         if ( r == "g"):	
-            p+= block
+            p += block
             ProgressBar(p,size)
         else:
             print
             print remaining, block, 
+            if ( r!= 'b'):
+                for i in range(0,255):
+                    ser.write( "%c" % 0 )
+                print "sync:", ser.read(1)
+                return p
             print "bad", r
             #break
             
@@ -94,7 +98,6 @@ def DownloadData( address, size ):
         l = ord(ser.read(1))
         if l==0:
             break            
-           
         checksum = 0
         for i in range(0,l):
             c = ser.read(1)
@@ -125,11 +128,36 @@ def VerifyData(address, data):
 
     print "Data verified"
     
+    for i in range(0,len(data)):
+        if ( data[i]!= ver[i]):
+            print "Error @ %x expected %x found %x" % ( i, ord(data[i]), ord(ver[i]) )
+            
     if CompareMD5(data,ver):
         print "OK!"
     else:
         print "error!!"
+
+def Test():
+    ser.write('t')
+    s = ser.read(255)
+    print "Got %i bytes" % len(s)
+    print s
+
+def IsReady():
+    init = False
+    for i in range(0,4):
+        ser.flush()
+        ser.write( "?")
+        tmp = ser.read(2) 
+        if tmp == ":)":
+            init = True
+            break
     
+    if init == False:
+        print "cant initialize!"
+        print "received '%s'" % tmp
+
+    return init
 
 
 def main():   
@@ -143,12 +171,10 @@ def main():
     parser.add_option("-u", type=str, dest="upload", help="name for generated C array")    
     parser.add_option("-v", type=str, dest="verify", help="name for generated C array")    
     options, args = parser.parse_args()
-    
-    ser.write( "?")
-    if ser.read(2) != ":)":
-        print "cant initialize!"
-        return
-    
+
+    if IsReady()==False:
+        return;
+        
     print "avr ready"     
         
     if options.upload != None:
@@ -156,8 +182,12 @@ def main():
      
         if options.size !=None:
             data = data[0:options.size]
-        
-        p = UploadData( data, options.address )
+    
+        p = 0;
+        while( p < len(data) ):
+            if IsReady()==False:
+                return;
+            p += UploadData( data[p:], options.address + p )
         
         VerifyData( options.address, data)
                
@@ -183,15 +213,13 @@ def main():
     return
     
     
-ser = serial.Serial("COM3", 19200,  timeout=1)
+ser = serial.Serial("COM4", 19200, bytesize=8, parity='N', stopbits=1,  timeout=1)
 
-ser.flush()
-ser.write( "f")
-print ser.read(3)
+print "press a key to download"
+msvcrt.getch()
 
 main()
 
-ser.write( "x" )		
+#ser.write( "x" )		
 
 ser.close()
-     

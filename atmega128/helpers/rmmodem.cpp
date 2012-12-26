@@ -18,7 +18,7 @@ static unsigned int GetUintFromSerial(Serial *ser)
 
 static void rmReceive(Serial *ser, unsigned int address, IO* io )
 {
-	while ( 1 ) 
+	for(;;)
 	{	
 		unsigned char c = GetByteFromSerial(ser);
 		if ( c == 0 )

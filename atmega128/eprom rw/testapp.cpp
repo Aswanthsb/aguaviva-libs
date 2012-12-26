@@ -19,7 +19,7 @@
 #include "e27256.h"
 #include "e27512.h"
 #include "RAM62256.h"
-
+#include "ee28256.h"
 
 #define LED_PORT   PORTB
 #define LED_DDR    DDRB
@@ -82,13 +82,15 @@ E27512 e27512;
 E27256 e27256;
 E27128 e27128;
 RAM62256 ram62256;
+EE28256 ee28256;
 
-IO *pIO = &ram62256;
+
+IO *pIO = &ee28256;
 
 
 bool ProcessCommand( char **p )
 {
-/*
+
 	if ( ParseToken(p, "delay") )
 	{
 		ParseSpaces(p);
@@ -100,11 +102,11 @@ bool ProcessCommand( char **p )
 			if ( ParseInt(p, &d2) )
 			{
 				SetDelay(d1,d2);
+                printf("write delays: %i %i\n", d1,d2);
 			}
 		}
 	}
 	else 
-*/
 	if ( ParseToken(p, "dump") )
 	{
 		ParseSpaces(p);
