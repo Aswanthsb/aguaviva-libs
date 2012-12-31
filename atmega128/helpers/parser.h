@@ -6,6 +6,7 @@ bool ParseSpaces( char **ps);
 bool ParseToken( char **ps, char * token );
 unsigned char IsNumber( char c );
 bool ParseInt( char **ps, int *out);
+bool ParseUInt( char **ps, unsigned int *out);
 bool Expect(char **pc, char c);
 bool ExpectNoSpace(char **ps, char c);
 void FindClosingBracket( char **pp );

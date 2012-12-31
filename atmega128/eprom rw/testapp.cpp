@@ -21,6 +21,8 @@
 #include "RAM62256.h"
 #include "ee28256.h"
 
+#include "msx.h"
+
 #define LED_PORT   PORTB
 #define LED_DDR    DDRB
 #define LED_BIT    PB1
@@ -91,29 +93,13 @@ IO *pIO = &ee28256;
 bool ProcessCommand( char **p )
 {
 
-	if ( ParseToken(p, "delay") )
-	{
-		ParseSpaces(p);
-		int d1=1982;
-		int d2=1982;
-		if ( ParseInt(p, &d1) )
-		{
-			ParseSpaces(p);
-			if ( ParseInt(p, &d2) )
-			{
-				SetDelay(d1,d2);
-                printf("write delays: %i %i\n", d1,d2);
-			}
-		}
-	}
-	else 
 	if ( ParseToken(p, "dump") )
 	{
 		ParseSpaces(p);
-		if ( ParseInt(p, (int*)&DumpAddress) )
+		if ( ParseUInt(p, &DumpAddress) )
 		{
 			ParseSpaces(p);
-			ParseInt(p, (int*)&DumpLength);
+			ParseUInt(p, &DumpLength);
 		}
 		
 		Dump(DumpAddress, DumpLength, pIO);
@@ -124,38 +110,21 @@ bool ProcessCommand( char **p )
 	{
 		rmModem(&Ser0, pIO);
 	}
-/*
-	else if ( ParseToken(p, "test") )
-	{
-		ParseSpaces(p);
-		int d1=0;
-		int d2=0;
-		if ( ParseInt(p, &d1) )
-		{
-			ParseSpaces(p);
-			if ( ParseInt(p, &d2) )
-			{
-				SetDelay(5,5);
-
-				for(int i=0;i<strlen(msg);i++)
-					Write27256(i, 0);
-
-				SetDelay(d1,d2);
-
-				for(int i=0;i<strlen(msg);i++)
-					Write27256(i, msg[i]);					
-			}
-		}		
-	}
-*/
 	else if ( ParseToken(p, "crc") )
 	{
-		uint16_t crc = 0;
-		for(unsigned int i=0;i<strlen(msg);i++)
+		ParseSpaces(p);
+		
+		unsigned int start;
+		unsigned int length;
+		if ( ParseUInt(p, &start) && ParseUInt(p, &length) )
 		{
-			crc = _crc16_update(crc, pIO->Read(i));
+			uint16_t crc = 0;
+			for(unsigned int i=0;i<length;i++)
+			{
+				crc = _crc16_update(crc, pIO->Read(i));
+			}
+			printf("crc %x\n", crc);
 		}
-		printf("crc %x\n", crc);
 	}
 	else if ( ParseToken(p, "reboot") )
 	{
@@ -215,6 +184,8 @@ int main( void )
 	printf("XChip stuff\n");
 	   
 	pIO->Init();
+	
+	msxInit();
 	   
 	while ( 1 ) 
 	{	
@@ -242,7 +213,55 @@ int main( void )
 		*/
 		char c = **p;
 		
-		if ( c == '1' )
+		if ( c == 'x' )
+		{
+			int l = strlen(msg);
+			for(unsigned int i=0;i<l;)
+			{
+				msxEnableWait();
+				msxWaitForIO();
+				if (msxReading())
+				{
+					msxWrite(msg[i]);
+					printf("%c", msg[i]);								
+					i++;
+				}
+				msxDisableWait();
+
+			}
+			//printf("\n");
+		}
+		else if ( c == 'X' )
+		{
+			for(;;)
+			{
+				msxEnableWait();
+				msxWaitForIO();
+				unsigned char c = msxRead();
+				
+				printf("%x,", c );
+				msxDisableWait();
+			}
+			//printf("\n");
+		}
+		else if ( c == 'e' )
+		{
+			printf("waiting r/w...");
+			msxEnableWait();
+			msxWaitForIO();
+			if (msxReading())
+			{
+				printf("wrote 65 to MSX\n");								
+				msxWrite(65);						
+			}
+			else
+			{
+				printf("read fom MSX: %x\n", msxRead() );				
+			}
+			
+			msxDisableWait();
+		}
+		else if ( c == '1' )
 		{
 			pIO = &e27128;            
 			printf("Read27128\n");
@@ -260,6 +279,10 @@ int main( void )
 		else if ( c == 'd')
 		{		
             Dump(0, 256, pIO);
+		}
+		else if ( c == 'm')
+		{
+			rmModem(&Ser0, pIO);		
 		}
 		else if ( c == 'o')
 		{		

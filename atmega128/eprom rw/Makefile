@@ -83,7 +83,7 @@ SRC =
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
-CPPSRC = testapp.cpp e27128.cpp e27256.cpp e27512.cpp ee28256.cpp ram62256.cpp 
+CPPSRC = testapp.cpp e27128.cpp e27256.cpp e27512.cpp ee28256.cpp ram62256.cpp msx.cpp
 
 
 # List Assembler source files here.

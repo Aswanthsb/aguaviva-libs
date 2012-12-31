@@ -77,33 +77,80 @@ unsigned char IsNumber( char c )
 	return ( c >= '0' ) && ( c <= '9' );
 }
 
-bool ParseInt( char **ps, int *out)
+bool ParseUInt( char **ps, unsigned int *out)
 {
 	int val = 0;
 
+	char *s = *ps;
+	
+	for(char i = 0;;i++)
+	{
+		if ( IsNumber(*s) )
+		{
+			val = ( val * 10 ) + (*s-'0');
+		}
+		else
+		{
+			if (i>0)
+			{
+				(*ps) +=i;
+					
+				*out = val;
+				return true;
+			}			
+			return false;	
+		}
+		s++;
+	}		
+}
+
+bool ParseInt( char **ps, int *out)
+{
+
 	bool sign = Expect(ps, '-');
 
-	char *s = *ps;
+	bool res = ParseUInt(ps, (unsigned int *)out);
+	
+	if (sign)
+		*out = -*out;
+	
+	return res;
+}
 
-	int i = 0;
-	for(;IsNumber(*s);i++)
+bool ParseHex( char **ps, unsigned int *out)
+{
+	int val = 0;
+
+	char *s = *ps;
+	
+	for(char i=0;;i++)
 	{
-		val = ( val * 10 ) + (*s-'0');
+		if (IsNumber(*s))
+		{
+			val = ( val * 16 ) + (*s-'0');		
+		}
+		else if (*s>='a'&& *s<='f')
+		{
+			val = ( val * 16 ) + (*s-'a'+10);				
+		}
+		else if (*s>='A'&& *s<='F')
+		{
+			val = ( val * 16 ) + (*s-'A'+10);				
+		}
+		else
+		{
+			if (i>0)
+			{
+				(*ps) +=i;
+				*out = val;
+				return true;
+			}
+			return false;
+		}
 		s++;
 	}
-		
-	if (i>0)
-	{
-		(*ps) +=i;
-		if (sign) 
-			val = -val;
-			
-		*out = val;
-		return true;
-	}			
-	
-	return false;	
 }
+
 
 void FindClosingBracket( char **pp )
 {
