@@ -64,6 +64,17 @@
 MYSIZE		equ	1		; Size of environment
 SECLEN		equ	512		; Size of biggest sector
 
+
+FNKSTR      EQU 0F87FH
+FNKDEF:	
+;    123456789abcdef
+db      "out 1,1",13
+ds      16-8
+db	    "?chr$(inp(0))",13
+ds      16-14
+db	    "files",13
+ds      16-6
+
 ; INIHRD
 ;
 ; Input:	None
@@ -71,17 +82,27 @@ SECLEN		equ	512		; Size of biggest sector
 ; Changed:	AF,BC,DE,HL,IX,IY may be affected
 
 INIHRD:
+
+        LD      BC,16*3
+        LD      DE,FNKSTR
+        LD      HL,FNKDEF
+        LDIR
+
 		ld	a, 60h
 		out (0), a
 
 		ld a,'d'
 		out (1), a
+        call SENDBYTE
 		ld a,'i'
 		out (1), a
+        call SENDBYTE
 		ld a,'s'
 		out (1), a
+        call SENDBYTE
 		ld a,'k'
 		out (1), a
+        call SENDBYTE
 		ret
 
 
@@ -358,3 +379,26 @@ DSKSTP:
 		ret
 
 
+SENDBYTE:
+    
+    out (91h), a
+        
+    ld a,1
+    out (90h), a
+sb1:
+    in a, (90h)
+    bit 1,a
+    jr nz, sb1
+sb2:
+    in a, (90h)
+    bit 1,a
+    jr z, sb2
+sb3:
+    in a, (90h)
+    bit 1,a
+    jr nz, sb3
+    ret
+    
+    
+    
+    
