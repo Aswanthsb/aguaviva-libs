@@ -105,14 +105,18 @@ bool ParseInt( char **ps, int *out)
 	return false;	
 }
 
-void FindClosingBracket( char **pp )
+bool FindClosingBracket( char **pp )
 {
 	int c = 0;
 	char *p = *pp;
 
 	for(int i=0;;i++)
 	{
-		if (*p=='{')
+		if (*p==0)
+		{
+			return false;
+		}
+		else if (*p=='{')
 		{
 			c++;
 		}
@@ -122,7 +126,7 @@ void FindClosingBracket( char **pp )
 			if ( c==0)
 			{
 				(*pp)+=i+1;
-				return;
+				return true;
 			}
 		}
 		else if (*p==';')
@@ -130,7 +134,7 @@ void FindClosingBracket( char **pp )
 			if ( c==0)
 			{
 				(*pp)+=i+1;
-				return;
+				return true;
 			}
 		}
 		p++;

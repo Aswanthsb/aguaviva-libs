@@ -24,7 +24,7 @@ void Variables::SetPreamble(void *pr)
 
 int *Variables::Find(char *name, byte len)
 {
-	for(char *vtable = variables;vtable!=pLastVar;) {
+		for(char *vtable = variables;vtable!=pLastVar;) {
 		char l = *vtable;
 		vtable++;
 		if ( l==len ) {
@@ -38,16 +38,22 @@ int *Variables::Find(char *name, byte len)
 	return NULL;
 }
 
+int *Variables::Create(char *name, byte len)
+{
+	*pLastVar=len;
+	strcpy(pLastVar+1,name);
+	pLastVar += *pLastVar +1;
+	int *v = (int*)(pLastVar);
+	pLastVar+=sizeof(int);
+	return v;
+}
+
 int *Variables::FindOrCreate(char *name, byte len)
 {
 	int *v = Find(name, len);
-	if ( v==NULL ) {
-		//add it
-		*pLastVar=len;
-		strcpy(pLastVar+1,name);
-		pLastVar += *pLastVar +1;
-		v = (int*)(pLastVar);
-		pLastVar+=sizeof(int);
+	if ( v==NULL ) 
+	{
+		return Create(name, len);
 	}
 
 	return v;

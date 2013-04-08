@@ -1,0 +1,118 @@
+;--------------------------------------
+;	** WRITE_TO_PC **
+;
+;hl: Where to read the data
+;c : port
+;b : size
+;
+;--------------------------------------
+WRITE_TO_PC:
+
+WRITE_TO_PC_MORE:
+		out (c), 'w'
+		out (c), 'r'
+		out (c), b
+
+		push hl
+
+		push bc
+
+		ld a, b
+WRITE_TO_PC_LOOP:
+		ld d, (hl)
+		out (c), d
+		inc hl
+		xor d
+		djnz WRITE_TO_PC_LOOP
+		
+		pop bc
+
+		; send crc
+		out (c), a
+
+		in a, (c)
+		cp ':'
+		jr nz, WRITE_TO_PC_RESYNC
+		in a, (c)
+		cp ')'
+		jr nz, WRITE_TO_PC_RESYNC
+
+		pop af ; gets HL.. restores heap
+
+		ret
+
+
+WRITE_TO_PC_RESYNC:
+
+		push bc
+
+WRITE_TO_PC_RESYNC_LOOP:
+		out (c), '*'		
+		djnz WRITE_TO_PC_RESYNC_LOOP
+		pop bc
+
+		pop hl
+
+		jp WRITE_TO_PC_MORE
+				
+
+;--------------------------------------
+;	** READ_FROM_PC **
+;
+;hl: Where to write the data
+;c : port
+;
+;--------------------------------------
+READ_FROM_PC:
+
+READ_FROM_PC_MORE:
+		in a, (c)
+		cp 'r'
+		jr ne,DSKIO_READMORE
+
+		in a, (c)
+		cp 'd'
+		jr nz,DSKIO_READMORE
+		
+		; get size
+		xor a
+		in b, (c)
+		or b
+
+		; return if zero
+		scf	
+		ccf
+		ret z
+
+		push hl
+READ_FROM_PC_LOOP:		
+		in d, (c)
+		ld (hl),d
+		inc hl
+		xor d
+		djnz READ_FROM_PC_LOOP
+
+		;get 'crc'
+		in d, (c)
+		cp d			
+		jr nz, CHECK_CRC_BAAD	
+
+CHECK_CRC_GOOD:
+		ld a,':'
+		out (c), a
+		ld a,')'
+		out (c), a
+
+		pop af	;old value of hl, restoring heap
+		ret
+
+CHECK_CRC_BAAD:
+		ld a,':'
+		out (c), a
+		ld a,'('
+		out (c), a
+
+		pop hl
+		jr DSKIO_READMORE
+
+

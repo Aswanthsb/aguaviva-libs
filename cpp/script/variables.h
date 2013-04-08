@@ -18,6 +18,7 @@ class Variables
 public:
 	Variables();
 	int *Find(char *name, byte len);
+	int *Create(char *name, byte len);
 	int *FindOrCreate(char *name, byte len);
 	void Set(char *name, byte len, int value);
 	void Set(char *name, int value);

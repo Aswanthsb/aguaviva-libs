@@ -8,7 +8,7 @@ unsigned char IsNumber( char c );
 bool ParseInt( char **ps, int *out);
 bool Expect(char **pc, char c);
 bool ExpectNoSpace(char **ps, char c);
-void FindClosingBracket( char **pp );
+bool FindClosingBracket( char **pp );
 int GetKeyWord( char **ps );
 
 #endif

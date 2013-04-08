@@ -45,13 +45,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	//char command[] = "for 1 { hi hi } bye";
 	//char command[] = " mm=(1+3) * 4; if (2>4)  hi;  else  bye;   caca=4*mm;";
 	//char command[] = " mm=(1+3) * 0 if mm>4 { hi } else { bye }  caca=4*mm";
-	char command[] = " for(i=0;i<10;i++){  for(j=0;j<10;) { print j+(i*10), i, 2*i, 3*i; j++;} } bye;";
+	//char command[] = "for(i=0;i<10;i++){  for(j=0;j<10;) { print j+(i*10), i, 2*i, 3*i; j++;} } bye;";
+	//char command[] = "for(i=0;i<10;i++){  print (i*10), i, 2*i, 3*i; }  bye;";
+	//char command[] = " caca(p) { print p; } for(i=0;i<10;i++){  for(j=0;j<10;) { print j+(i*10), i, 2*i, 3*i; j++;} } bye;";
+	char command[] = " mul(e,f) { print e*f; } caca(c,d) { mul(c,d); } a=7; caca(a,5); bye;";
 	char *pp = command;
 	do
 	{
 		if ( ProcessScript(&pp, ProcessStatements, &var) == false)
 		{
-			printf ( "error from: '%s'\n", *pp );
+			printf ( "error from: '%s'\n", pp );
 			return 0;
 		}
 	}while(*pp!=0);	

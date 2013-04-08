@@ -1,0 +1,807 @@
+; A template driver section
+; (C) 1992-2005 by Ultrasoft
+;
+; By:	Arjen Zeilemaker
+;
+; Version:		0.90
+
+
+CHPUT   EQU     0A2H
+CALBAS	EQU	0159H
+ERRHAND EQU     0406FH
+FRMEVL  EQU     04C64H
+CHRGTR  EQU     04666H
+VALTYP  EQU     0F663H
+USR     EQU     0F7F8H
+PROCNM	EQU	0FD89H
+
+; symbols which can be used from the kernel
+
+; GETSLT	get my slotid
+; DIV16		divide
+; GETWRK	get my workarea
+; SETINT	install my interrupt handler
+; PRVINT	call orginal interrupt handler
+; PROMPT	prompt for phantom drive
+; RAWFLG	verify flag
+; $SECBUF	temporary sectorbuffer
+; XFER		transfer to TPA
+; DISINT	inform interrupts are being disabled
+; ENAINT	inform interrupts are being enabled
+; PROCNM	CALL statement name
+
+; symbols which must be defined by the driver
+
+; INIHRD	initialize diskdriver hardware
+; DRIVES	how many drives are connected
+; INIENV	initialize diskdriver workarea
+; DSKIO		diskdriver sector i/o
+; DSKCHG	diskdriver diskchange status
+; GETDPB	build Drive Parameter Block
+; CHOICE	get format choice string
+; DSKFMT	format disk
+; DSKSTP	stop diskmotor
+; OEMSTA	diskdriver special call statements
+
+; MYSIZE	size of diskdriver workarea
+; SECLEN	size of biggest sector supported by the diskdriver
+; DEFDPB	pointer to a default Drive Parameter Block
+
+; errorcodes used by DSKIO, DSKCHG and GETDPB
+;
+; 0	write protect error
+; 2	not ready error
+; 4	data (crc) error
+; 6	seek error
+; 8	record not found error
+; 10	write fault error
+; 12	other error
+
+; errorcodes used by DSKFMT
+;
+; 0	write protect error
+; 2	not ready error
+; 4	data (crc) error
+; 6	seek error
+; 8	record not found error
+; 10	write fault error
+; 12	bad parameter
+; 14	insufficient memory
+; 16	other error
+
+
+
+MYSIZE		equ	1		; Size of environment
+SECLEN		equ	512		; Size of biggest sector
+
+
+FNKSTR      EQU 0F87FH
+FNKDEF:	
+;     123456789abcdef
+db   "out 1,1",13
+ds   16-8
+db	 "?chr$(inp(0))",13
+ds   16-14
+db	 "files",13
+ds   16-6
+
+
+
+; INIHRD
+;
+; Input:	None
+; Output:	None
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+
+INIHRD:
+	
+	ld c,16
+	ld b,6
+	ld hl, INIHRD_STR
+
+	call WRITE_TO_PC
+		
+	ld 	b, 16*3
+	LD	HL,FNKSTR
+	call 	READ_FROM_PC
+	ret NC
+
+        LD      BC,16*3
+        LD      DE,FNKSTR
+        LD      HL,FNKDEF
+        LDIR
+		
+	ret
+
+INIHRD_STR:
+		DEFB	"INIHRD"
+
+
+; DRIVES
+;
+; Input: 	F	Zx set if to return physical drives
+;			Zx reset if to return at least 2 drives, if only one
+;			  physical drive it becomes a phantom drive
+; Output:	L	number of drives
+; Changed:	F,HL,IX,IY may be affected
+;
+; Remark:	DOS1 does not handle L=0 correctly
+
+DRIVES:
+		ld	l,1
+		ret
+
+
+
+; INIENV
+;
+; Input: 	None
+; Output:	None
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+;
+; Remark:	examples installs own interrupt handler, but this is NOT required.
+;		depends on the hardware if this is needed.
+
+INIENV:
+		call	GETWRK
+		ld	(hl),1
+		ld	hl,INTHAND
+		jp	SETINT
+
+INTHAND:	
+		push	af
+		push	bc
+		push	de
+		push	hl
+		push	ix
+		push	iy
+		call	GETWRK
+		inc	(hl)
+		pop	iy
+		pop	ix
+		pop	hl
+		pop	de
+		pop	bc
+		pop	af
+		jp	PRVINT
+
+
+
+;
+; DSKIO
+;
+; Input: 	A	Drivenumber
+;		F	Cx reset for read
+;			Cx set for write
+; 		B	number of sectors
+; 		C	Media descriptor
+;		DE	logical sectornumber
+; 		HL	transferaddress
+; Output:	F	Cx set for error
+;			Cx reset for ok
+;		A	if error, errorcode
+;		B	if error, remaining sectors
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+
+DSKIO:
+		push hl
+		push de
+		push bc
+		push af
+		push af
+
+		call SP_TO_HL
+		
+		push hl
+		ld (hl),'i'
+		inc hl
+		ld (hl),'o'
+		inc hl
+		pop hl
+		
+		ld c,16
+		ld b,10
+
+		call WRITE_TO_PC
+
+		pop af
+		pop af
+		pop bc
+		pop de
+		pop hl
+
+		JP	NC,DSKIO_READ
+
+;--------------------------------------
+
+DSKIO_WRITE:	push bc
+		ld c,16
+		call WRITE_TO_PC
+		pop bc
+		ret
+
+;--------------------------------------
+
+DSKIO_READ:	push bc
+		ld c,16
+		call READ_FROM_PC
+		pop bc
+		ret
+	
+
+
+
+; DSKCHG
+;
+; Input: 	A	Drivenumber
+; 		B	0
+; 		C	Media descriptor
+; 		HL	pointer to DPB
+; Output:	F	Cx set for error
+;			Cx reset for ok
+;		A	if error, errorcode
+;		B	if no error, disk change status
+;			01 disk unchanged
+;			00 unknown
+;			FF disk changed
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+; Remark:	DOS1 kernel expects the DPB updated when disk change status is unknown or changed
+;		DOS2 kernel does not care if the DPB is updated or not
+
+DSKCHG:
+
+		ld c,16
+		ld b,6
+		ld hl, DSKCHG_STR
+
+		call WRITE_TO_PC
+
+		in a, (1)
+		ld	b,a
+
+		scf
+		ccf
+		ret
+
+DSKCHG_STR:
+		DEFB	"DSKCHG"
+
+
+; GETDPB
+;
+; Input: 	A	Drivenumber
+; 		B	first byte of FAT
+; 		C	Media descriptor
+; 		HL	pointer to DPB
+; Output:	[HL+1]
+;		..
+;		[HL+18]	updated
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+
+GETDPB:
+		ex	de,hl
+		inc	de
+		ld	a,b
+		sub	0F8H
+		ret	c
+		ld	l,a
+		ld	h,0
+		add	hl,hl			; *2
+		ld	c,l
+		ld	b,h
+		add	hl,hl
+		add	hl,hl
+		add	hl,hl			; *16
+		add	hl,bc			; *18
+		ld	bc,DpbTable
+		add	hl,bc
+		ld	bc,18
+		ldir
+		ret
+
+DpbTable:	db	0F8h		; Media F8
+		dw	512		; 80 Tracks
+		db	0Fh		; 9 sectors
+		db	04h		; 1 side
+		db	01h		; 3.5" 360 Kb
+		db	02h
+		dw	1
+		db	2
+		db	112
+		dw	12
+		dw	355
+		db	2
+		dw	5
+
+		db	0F9h		; Media F9
+		dw	512		; 80 Tracks
+		db	0Fh		; 9 sectors
+		db	04h		; 2 sides
+		db	01h		; 3.5" 720 Kb
+		db	02h
+		dw	1
+		db	2
+		db	112
+		dw	14
+		dw	714
+		db	3
+		dw	7
+
+		db	0FAh		; Media FA
+		dw	512		; 80 Tracks
+		db	0Fh		; 8 sectors
+		db	04h		; 1 side
+		db	01h		; 3.5" 320 Kb
+		db	02h
+		dw	1
+		db	2
+		db	112
+		dw	10
+		dw	316
+		db	1
+		dw	3
+
+		db	0FBh		; Media FB
+		dw	512		; 80 Tracks
+		db	0Fh		; 8 sectors
+		db	04h		; 2 sides
+		db	01h		; 3.5" 640 Kb
+		db	02h
+		dw	1
+		db	2
+		db	112
+		dw	10
+		dw	635
+		db	2
+		dw	5
+
+		db	0FCh		; Media FC
+		dw	512		; 40 Tracks
+		db	0Fh		; 9 sectors
+		db	04h		; 1 side
+		db	00h		; 5.25" 180 Kb
+		db	01h
+		dw	1
+		db	2
+		db	64
+		dw	9
+		dw	352
+		db	2
+		dw	5
+
+		db	0FDh		; Media FD
+		dw	512		; 40 Tracks
+		db	0Fh		; 9 sectors
+		db	04h		; 2 sides
+		db	01h		; 5.25" 360 Kb
+		db	02h
+		dw	1
+		db	2
+		db	112
+		dw	12
+		dw	355
+		db	2
+		dw	5
+
+		db	0FEh		; Media FE
+		dw	512		; 40 Tracks
+		db	0Fh		; 8 sectors
+		db	04h		; 1 side
+		db	00h		; 5.25" 160 Kb
+		db	01h
+		dw	1
+		db	2
+		db	64
+		dw	7
+		dw	314
+		db	1
+		dw	3
+
+		db	0FFh		; Media FF
+		dw	512		; 40 Tracks
+		db	0Fh		; 8 sectors
+		db	04h		; 2 sides
+		db	01h		; 5.25" 320 Kb
+		db	02h
+		dw	1
+		db	2
+		db	112
+		dw	10
+		dw	316
+		db	1
+		dw	3
+
+DEFDPB		equ	DpbTable+18-1
+
+
+
+
+; CHOICE
+;
+; Input: 	None
+; Output:	HL	pointer to choice string, 0 if no choice
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+
+CHOICE:
+		ld	hl,ChoiceStr
+		ret
+
+ChoiceStr:	db	13,10
+		db	"1 - Choice A",13,10
+		db	"2 - Choice B",13,10
+		db	13,10
+		db	0
+
+
+
+; DSKFMT
+;
+; Input: 	A	choicecode (1-9)
+;		D	drivenumber
+;		HL	begin of workarea
+;		BC	length of workarea
+; Output:	F	Cx set for error
+;			Cx reset for ok
+;		A	if error, errorcode
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+
+DSKFMT:
+		ld c,16
+		ld b,6
+		ld hl, DSKFMT_STR
+
+		call WRITE_TO_PC
+		ret
+
+DSKFMT_STR:
+		DEFB	"DSKFMT"
+
+		ccf
+		ret
+
+
+
+; OEMSTATEMENT
+;
+; Input:	HL	basicpointer
+; Output:	F	Cx set if statement not recognized
+;			Cx reset if statement is recognized
+;		HL	basicpointer,	updated if recognized
+;					unchanged if not recognized
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+
+OEMSTA:
+
+		PUSH    HL
+		LD	HL,CMDS	        ; Table with "_" commands
+.CHKCMD:
+		LD	DE,PROCNM
+.LOOP:		LD	A,(DE)
+		CP	(HL)
+		JR	NZ,.TONEXTCMD	; Not equal
+		INC	DE
+		INC	HL
+		AND	A
+		JR	NZ,.LOOP	; No end of command name, go checking
+		LD	E,(HL)
+		INC	HL
+		LD	D,(HL)
+		POP	HL		; routine address
+		CALL	GETPREVCHAR
+		CALL	.CALLDE		; Call routine
+		AND	A
+		RET
+ 
+.TONEXTCMD:
+		LD	C,0FFH
+		XOR	A
+		CPIR			; Skip to end of commandname
+		INC	HL
+		INC	HL		; Skip address
+		CP	(HL)
+		JR	NZ,.CHKCMD	; Not end of table, go checking
+		POP	HL
+	        SCF
+		RET
+ 
+.CALLDE:
+		PUSH	DE
+		RET
+ 
+;---------------------------
+CMDS:
+ 
+; List of available commands (as ASCIIZ) and execute address (as word)
+ 
+		DEFB	"WR",0      ; Print upper case string
+		DEFW	OEMSTA_WR
+	 
+		DEFB	"RD",0      ; Print lower case string
+		DEFW	OEMSTA_RD
+	 
+		DEFB	0               ; No more commands
+
+
+OEMSTA_WR:
+		CALL	EVALTXTPARAM	; Evaluate text parameter
+		PUSH	HL
+        CALL    GETSTRPNT
+
+		LD		C,16
+		CALL	WRITE_TO_PC
+
+		POP	HL
+		OR	A
+		ret
+
+
+OEMSTA_RD:	
+		CALL	EVALTXTPARAM	; Evaluate text parameter
+		PUSH	HL
+        CALL    GETSTRPNT
+
+		LD		C,16
+		
+		POP	HL	
+		OR A
+		ret
+
+
+
+
+GETSTRPNT:
+; OUT:
+; HL = String Address
+; B  = Lenght
+ 
+        LD      HL,(0F7F8H)
+        LD      B,(HL)
+        INC     HL
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        EX      DE,HL
+        RET
+ 
+EVALTXTPARAM:
+		CALL	CHKCHAR
+		DEFB	"("             ; Check for (
+		LD	IX,FRMEVL
+		CALL	CALBAS		; Evaluate expression
+        LD      A,(VALTYP)
+        CP      3               ; Text type?
+        JP      NZ,TYPE_MISMATCH
+		CALL	CHKCHAR
+		DEFB	")"             ; Check for )
+        RET
+ 
+ 
+CHKCHAR:
+	CALL	GETPREVCHAR	; Get previous basic char
+	EX	(SP),HL
+	CP	(HL) 	        ; Check if good char
+	JR	NZ,SYNTAX_ERROR	; No, Syntax error
+	INC	HL
+	EX	(SP),HL
+	INC	HL		; Get next basic char
+ 
+GETPREVCHAR:
+	DEC	HL
+	LD	IX,CHRGTR
+	JP      CALBAS
+ 
+ 
+TYPE_MISMATCH:
+        LD      E,13
+        DB      1
+ 
+SYNTAX_ERROR:
+        LD      E,2
+	LD	IX,ERRHAND	; Call the Basic error handler
+	JP	CALBAS
+
+
+
+; DSKSTP (Not the offical name)
+;
+; Input:	None
+; Output:	None
+; Changed:	AF,BC,DE,HL,IX,IY may be affected
+
+DSKSTP:
+		ld c,16
+		ld b,6
+		ld hl, DSKSTP_STR
+
+		call WRITE_TO_PC
+		ret
+
+DSKSTP_STR:
+		DEFB	"DSKSTP"
+
+
+		ret
+
+
+    
+    
+
+
+    
+
+
+;--------------------------------------
+;	** WRITE_TO_PC **
+;
+;hl: Where to read the data
+;c : port
+;b : size
+;
+;--------------------------------------
+WRITE_TO_PC:
+		ld e,b
+
+		ld b,3	; 3 retries
+WR_TO_PC_MORE:
+		
+		push bc
+
+		ld a, 'w'
+		out (c),a 
+		ld a, 'r'
+		out (c),a 
+
+		out (c), e
+
+		push hl
+
+		push bc
+
+		ld a, e
+		ld b, e
+WR_TO_PC_LOOP:
+		ld d, (hl)
+		out (c), d
+		inc hl
+		xor d
+		djnz WR_TO_PC_LOOP
+		
+		pop bc
+
+		; send crc
+		out (c), a
+
+		in a, (c)
+		cp ':'
+		jr nz, WR_TO_PC_RESYNC
+		in a, (c)
+		cp ')'
+		jr nz, WR_TO_PC_RESYNC
+
+		pop af ; gets HL.. restores heap
+		pop bc
+
+		scf	
+		ccf
+		ret
+
+
+SP_TO_HL:
+		ld h,0
+		ld l,2
+		add hl,sp
+		ret
+
+
+WR_TO_PC_RESYNC:
+
+		push bc
+		ld b,64
+WR_TO_PC_RESYNC_LOOP:
+		ld a, '*'
+		out (c),a 
+		djnz WR_TO_PC_RESYNC_LOOP
+		pop bc
+
+		pop hl
+
+		pop bc
+		djnz WR_TO_PC_MORE
+
+		scf	
+		ret
+
+				
+
+;--------------------------------------
+;	** READ_FROM_PC **
+;
+;hl: Where to write the data
+;c : port
+;
+;--------------------------------------
+READ_FROM_PC:
+		ld b, 3	; 3 retries
+RD_FROM_PC_MORE:
+		push bc
+		push hl
+
+		;-- check for header at least 255 times
+		ld b, 255
+RD_FROM_PC_HDR:	dec b
+		jr nz, RD_FROM_PC_CHK
+
+		pop hl
+		pop bc
+		ld a, 6
+		scf	
+		ret
+
+RD_FROM_PC_CHK:
+		in a, (c)
+		cp 'r'
+		jr nz,RD_FROM_PC_HDR
+
+		in a, (c)
+		cp 'd'
+		jr nz,RD_FROM_PC_HDR
+			
+		;-- get size
+		xor a
+		in b, (c)
+		or b
+		jr z, RD_FROM_PC_CRC
+		
+		push bc
+
+RD_FROM_PC_LOOP:		
+		in e, (c)
+		ld (hl),e
+		inc hl
+		xor e
+		djnz RD_FROM_PC_LOOP
+
+		pop bc
+
+RD_FROM_PC_CRC:
+		;get 'crc'
+		in e, (c)
+		cp e			
+		jr nz, CHECK_CRC_BAAD	
+
+CHECK_CRC_GOOD:
+		ld a,':'
+		out (c), a
+		ld a,')'
+		out (c), a
+
+		ld e, b
+
+		pop af	;old value of hl, restoring heap
+		pop bc
+
+		xor a
+		or e
+		jr nz, READ_FROM_PC
+
+		scf	
+		ccf
+		ret
+
+CHECK_CRC_BAAD:
+		ld a,':'
+		out (c), a
+		ld a,'('
+		out (c), a
+
+		pop hl
+		pop bc
+		djnz RD_FROM_PC_MORE
+
+		scf	
+		ret
+		
+
+
+
+
